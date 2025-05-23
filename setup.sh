@@ -187,7 +187,7 @@ run_command "~/.proto/bin/proto.exe setup" "Setting up Proto"
 # INSTALL PACKAGES
 # ────────────────────────────────────────────────
 scoop_buckets=(extras games java nerd-fonts versions)
-scoop_packages=(act bat bruno bun chezmoi docker dprint exercism fd flow-launcher fzf gh git github go@1.24.3 hyperfine IosevkaTerm-NF-Mono komorebi make migrate mingw neovim nodejs@22.14.0 ProggyClean-NF-Mono qutebrowser ripgrep ruff rustup-msvc ShareTechMono-NF-Mono starship stylua tableplus temurin21-jdk vial vim wezterm-nightly whkd winget winrar)
+scoop_packages=(act bat bruno bun chezmoi docker dprint exercism fd flow-launcher fzf gh git github go@1.24.3 hyperfine IosevkaTerm-NF-Mono komorebi make migrate mingw neovim nircmd nodejs@22.14.0 ProggyClean-NF-Mono qutebrowser ripgrep ruff rustup-msvc ShareTechMono-NF-Mono starship stylua tableplus temurin21-jdk vial vim wezterm-nightly whkd winget winrar)
 winget_packages=(Adobe.Acrobat.Reader.64-bit Blizzard.BattleNet Docker.DockerDesktop Microsoft.VisualStudio.2022.BuildTools pCloudAG.pCloudDrive PrivateInternetAccess.PrivateInternetAccess TheBrowserCompany.Arc Valve.Steam)
 go_tools=(github.com/air-verse/air@latest github.com/swaggo/swag/cmd/swag@latest golang.org/x/tools/gopls@latest mvdan.cc/gofumpt@latest)
 npm_tools=(sql-formatter)

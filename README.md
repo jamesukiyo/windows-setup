@@ -3,6 +3,8 @@ This is a script I created and use on Windows machines to quickly configure the
 environment. It hasn't really been tested but it's worked 3 times for me so far.
 
 ## Notes
+I mainly work with Go and Rust so it's tailored to that.
+
 Dry run mode doesn't work well, I added it for testing but it's not very
 consistent so I recommend not using it.
 

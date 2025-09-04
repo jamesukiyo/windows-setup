@@ -1,6 +1,10 @@
 #!/bin/bash
 # ────────────────────────────────────────────────
-# WINDOWS 11 SETUP SCRIPT BY github.com/jamesukiyo
+# Description: Windows 11 + NixOS-WSL setup script
+# Author: https://github.com/jamesukiyo
+# Source: https://github.com/jamesukiyo/windows-setup
+# License: GNU General Public License v3.0
+# Last modified: 2025-09-13
 # ────────────────────────────────────────────────
 
 set -euo pipefail
@@ -8,11 +12,18 @@ set -euo pipefail
 # ────────────────────────────────────────────────
 # CONFIG
 # ────────────────────────────────────────────────
-DRY_RUN=${DRY_RUN:-false}
 JOBS=8
 RETRIES=3
 
 start_time=$(date +%s)
+
+windows_username="james"
+wsl_name="nixos"
+github_username="jamesukiyo"
+nixos_config_repo="nixos"
+dotfiles_repo="dotfiles"
+flake_name="pear"
+script_repo="windows-setup"
 
 # ────────────────────────────────────────────────
 # LOGGING
@@ -49,11 +60,6 @@ run_command() {
 
 	log "→ $description..."
 
-	if [ "$DRY_RUN" = true ]; then
-		echo "(dry-run) $cmd"
-		return
-	fi
-
 	until eval "$cmd"; do
 		((attempts++))
 		if ((attempts >= RETRIES)); then
@@ -85,11 +91,6 @@ install_package() {
 
 	log "→ Installing $package via $manager..."
 
-	if [ "$DRY_RUN" = true ]; then
-		echo "(dry-run) $manager install $flags $package"
-		return
-	fi
-
 	if "$manager" list | grep -q "$package"; then
 		success "$package already installed"
 	else
@@ -120,19 +121,6 @@ parallel_install() {
 	wait
 }
 
-clone_repo() {
-	local repo_url="$1"
-	local repo_name
-	repo_name=$(basename "$repo_url" .git)
-
-	if [ -d "$repo_name/.git" ]; then
-		log "✓ Repo $repo_name exists, pulling updates"
-		(cd "$repo_name" && git pull --rebase)
-	else
-		run_command "git clone $repo_url" "Cloning $repo_name"
-	fi
-}
-
 safe_cd() {
 	local target="$1"
 	cd "$target" 2>/dev/null || { error "Failed to change directory to $target"; exit 1; }
@@ -142,9 +130,8 @@ enable_on_startup() {
 	log "→ Enabling apps on startup"
 	run_command "mkdir -p \"$HOME/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup\"" "Ensure startup folder exists"
 
-	local STARTUP_DIR="C:\\Users\\<USERNAME>\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"
+	local STARTUP_DIR="C:\\Users\\$windows_username\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"
 	local SHORTCUTS=(
-		"wezterm-nightly\\current\\wezterm-gui.exe"
 		"qutebrowser\\current\\qutebrowser.exe"
 		"f.lux\\current\\flux.exe"
 		"flow-launcher\\current\\Flow.Launcher.exe"
@@ -153,16 +140,11 @@ enable_on_startup() {
 
 	for shortcut in "${SHORTCUTS[@]}"; do
 		app_name=$(basename "$shortcut")
-		run_command "~/scoop/apps/nircmd/current/nircmd.exe shortcut \"C:\\Users\\<USERNAME>\\scoop\\apps\\$shortcut\" \"$STARTUP_DIR\" \"$app_name\"" "Create startup shortcut for $app_name"
+		run_command "~/scoop/apps/nircmd/current/nircmd.exe shortcut \"C:\\Users\\$windows_username\\scoop\\apps\\$shortcut\" \"$STARTUP_DIR\" \"$app_name\"" "Create startup shortcut for $app_name"
 	done
 
 	run_command "komorebic enable-autostart --whkd" "Enable komorebi on startup"
 	run_command "yasbc enable-autostart" "Enable yasb on startup"
-}
-
-rustup_config() {
-	log "→ Configuring rustup..."
-	run_command "~/scoop/apps/rustup-msvc/current/rustup-init.exe -y --default-toolchain=nightly --profile=default --component=rust-analyzer" "Initialise rustup"
 }
 
 # ────────────────────────────────────────────────
@@ -178,19 +160,14 @@ done
 run_command 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {
 	try { Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force} catch {};
 	iwr -useb https://get.scoop.sh | iex;
-	irm https://moonrepo.dev/install/proto.ps1 | iex;
-}"' "Running PowerShell setup for Scoop and Proto"
-
-run_command "~/.proto/bin/proto.exe setup" "Setting up Proto"
+}"' "Running PowerShell setup for Scoop"
 
 # ────────────────────────────────────────────────
 # INSTALL PACKAGES
 # ────────────────────────────────────────────────
-scoop_buckets=(extras games java nerd-fonts versions)
-scoop_packages=(act bat bruno bun chezmoi docker dprint exercism fd flow-launcher fzf gh git github go@1.24.3 hyperfine IosevkaTerm-NF-Mono komorebi make migrate mingw neovim nircmd nodejs@22.14.0 ProggyClean-NF-Mono qutebrowser ripgrep ruff rustup-msvc ShareTechMono-NF-Mono starship stylua tableplus temurin21-jdk vial vim wezterm-nightly whkd winget winrar)
-winget_packages=(Adobe.Acrobat.Reader.64-bit Blizzard.BattleNet Docker.DockerDesktop Microsoft.VisualStudio.2022.BuildTools pCloudAG.pCloudDrive PrivateInternetAccess.PrivateInternetAccess TheBrowserCompany.Arc Valve.Steam)
-go_tools=(github.com/air-verse/air@latest github.com/swaggo/swag/cmd/swag@latest golang.org/x/tools/gopls@latest mvdan.cc/gofumpt@latest)
-npm_tools=(sql-formatter)
+scoop_buckets=(extras games nerd-fonts versions)
+scoop_packages=(act alacritty bat bruno bun chezmoi docker exercism fd fzf gh git helix hyperfine IosevkaTerm-NF-Mono komorebi mingw nircmd ripgrep starship tableplus vial vim whkd winget winrar)
+winget_packages=(Adobe.Acrobat.Reader.64-bit Blizzard.BattleNet Docker.DockerDesktop pCloudAG.pCloudDrive PrivateInternetAccess.PrivateInternetAccess TheBrowserCompany.Arc Valve.Steam)
 
 log "→ Adding Scoop Buckets..."
 for bucket in "${scoop_buckets[@]}"; do
@@ -207,16 +184,6 @@ parallel_install "scoop" "${scoop_packages[@]}"
 log "→ Installing Winget packages..."
 for pkg in "${winget_packages[@]}"; do
 	install_package "winget" "" "$pkg"
-done
-
-log "→ Installing Go tools..."
-for tool in "${go_tools[@]}"; do
-	run_command "go install $tool" "Installing Go tool: $tool"
-done
-
-log "→ Installing npm tools..."
-for tool in "${npm_tools[@]}"; do
-	install_package "bun" "-g" "$tool"
 done
 
 # ────────────────────────────────────────────────
@@ -237,38 +204,48 @@ else
 	run_command "gh auth login" "GitHub CLI authentication"
 fi
 
-run_command "chezmoi init --apply https://github.com/username/dotfiles.git" "Applying dotfiles"
-
-mkdir -p ~/documents/projects
-safe_cd ~/documents/projects
-main_repos=(https://github.com/username/repo, https://github.com/username/repo2)
-for repo in "${main_repos[@]}"; do
-	clone_repo "$repo"
-done
-
-mkdir -p plugins && safe_cd plugins
-plugin_repos=(https://github.com/jamesukiyo/jimbo.vim https://github.com/jamesukiyo/quicksnip.vim https://github.com/jamesukiyo/search-this.nvim)
-for repo in "${plugin_repos[@]}"; do
-	clone_repo "$repo"
-done
+run_command "chezmoi init --apply https://github.com/$github_username/$dotfiles_repo.git" "Applying dotfiles"
 
 safe_cd ~
 
 run_command "[ ! -d '~/appdata/roaming/qutebrowser/config/catpuccin' ] && git clone https://github.com/catppuccin/qutebrowser.git ~/appdata/roaming/qutebrowser/config/catppuccin || echo ''" "Clone catppuccin theme for Qutebrowser"
 
-rustup_config
-
 enable_on_startup
 
-log "============================================================"
-log "Manual intervention needed:"
-log "Install the latest MSVC and Windows SDK via VS BuildTools"
-log "Visual Studio installer will open automatically in 3 seconds"
-log "Once you are done, exit VS BuildTools to finish this setup"
-log "============================================================"
+run_command "wsl --install --no-distribution" "Installing WSL"
+run_command "wsl --update" "Updating WSL"
+run_command "curl -L https://github.com/nix-community/NixOS-WSL/releases/latest/download/nixos.wsl -o ./nixos.wsl" "Download NixOS-WSL"
+run_command "wsl --install --no-launch --from-file ./nixos.wsl --name $wsl_name" "Installing NixOS-WSL"
+run_command "wsl --set-default $wsl_name" "Setting default WSL distro to NixOS"
+run_command "wsl --unregister ubuntu" "Unregistering Default Ubuntu WSL distro"
+success "NixOS-WSL base installation finished"
+run_command "wsl -d $wsl_name --user root --cd /etc/nixos curl -L https://raw.githubusercontent.com/$github_username/$script_repo/master/configuration.nix -o /etc/nixos/configuration.nix" "Bootstrapping NixOS configuration"
+run_command "wsl -d $wsl_name sudo nixos-rebuild boot" "[1/4] Fixing user name"
+run_command "wsl -t $wsl_name" "[2/4] Fixing user name"
+run_command "wsl -d $wsl_name --user root exit" "[3/4] Fixing user name"
+run_command "wsl -d $wsl_name sudo nixos-rebuild switch" "[4/4] Fixing user name"
+success "NixOS-WSL username updated"
+run_command "wsl -d $wsl_name sudo nixos-rebuild switch --accept-flake-config --flake github:$github_username/$nixos_config_repo#$flake_name" "Installing NixOS config from github/$github_username/$nixos_config_repo"
+success "NixOS-WSL rebuilt with flake from github:$github_username/$nixos_config_repo#$flake_name"
+run_command "wsl -d $wsl_name sudo rm -rf /root/.nix-defexpr/channels" "[1/2] cleaning channel directories"
+run_command "wsl -d $wsl_name sudo rm -rf /nix/var/nix/profiles/per-user/root/channels" "[2/2] cleaning channel directories"
+run_command "rm ./nixos.wsl" "Removing nixos.wsl installer"
+success "NixOS-WSL cleanup complete"
+run_command "wsl -d $wsl_name sudo tailscale up" "Configuring Tailscale"
+run_command "wsl -d $wsl_name gh auth login" "Configuring GitHub authentication"
+success "NixOS-WSL services authenticated"
+run_command "wsl -d $wsl_name mkdir ~/projects" "Creating empty projects directory"
+run_command "wsl -d $wsl_name touch ~/private.key" "Creating empty gpg key file"
+run_command "wsl -d $wsl_name touch ~/.ssh/id" "Creating empty ssh id file"
+run_command "wsl -d $wsl_name touch ~/.ssh/id.pub" "Creating empty ssh id.pub file"
+success "NixOS-WSL files/directories created"
 
-sleep 3
-"C:/Program Files (x86)/Microsoft Visual Studio/Installer/setup.exe"
+log "============================================================"
+log "Manual steps needed to complete setup:"
+log "- set ssh keys for normal user in ~/.ssh/id and ~/.ssh/id.pub"
+log "- add gpg key to ~/private.key"
+log "- gpg --import ~/private.key"
+log "============================================================"
 
 end_time=$(date +%s)
 elapsed=$(( end_time - start_time ))
@@ -276,4 +253,4 @@ elapsed=$(( end_time - start_time ))
 log "Setup complete in $elapsed seconds!"
 log "============================================================"
 
-exec bash
+exec nu

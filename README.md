@@ -1,43 +1,44 @@
-# plumjam's Windows 11 Setup Script
+# PlumJam's Windows 11 Setup Script
 
-This is a script I created and use on Windows machines to quickly configure the environment with NixOS-WSL and all the packages I need in Windows.
+This is a script I created and use on Windows machines to quickly configure the
+environment with NixOS-WSL and all the packages I need in Windows.
+
+This script has changed quite a few times so it isn't very clean but it gets the
+job done.
 
 ## Overview
 
 - Installs packages in parallel from Scoop and Winget
 - Automatic `gh auth login` (for private dotfile repos)
 - Automatically fetch and apply dotfiles with `chezmoi`
-- Downloads and installs NixOS-WSL
-- Configures NixOS-WSL with `./configuration.nix`
-- Applies and updates the WSL username based on `./configuration.nix`
-- Applies a NixOS-WSL configuration from a GitHub repository
+- Uses a backed-up pre-built NixOS-WSL to prepare WSL
 - Creates shortcuts/startup entries in Windows
 - Minor registry tweaks
 - Automatic cleanup in both Windows and WSL
-- Logging for every step of the process
 
 ## Usage
 
-If you want to use this script, you'll need to update the packages and variables for usernames etc.
+I doubt this script will be of use to anyone unless you somehow have the exact
+same setup with automatic backups, chezmoi, etc. You can see my NixOS
+configurations here if you are interested:
+[https://github.com/jamesukiyo/nixos](https://github.com/jamesukiyo/nixos)
 
-- Fork this repo
-- Update `configuration.nix`
-- Update the lists of packages
-- Change the script's variables to suit your setup
-- Run as a normal user in a bash shell
+To run via curl:
 
-Via curl directly after forking and updating:
 ```bash
 curl -sSL https://raw.githubusercontent.com/{username}/windows-setup/master/setup.sh | bash
 ```
+
 Copy/paste the script or clone the repo and run:
+
 ```bash
 ./setup.sh
 ```
 
 ## License
+
 ```
-Copyright (C) 2025-present  James Plummer <git@plumj.am>
+Copyright (C) 2025-present PlumJam <git@plumj.am>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

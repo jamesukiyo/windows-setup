@@ -4,7 +4,7 @@
 # Author: https://github.com/jamesukiyo
 # Source: https://github.com/jamesukiyo/windows-setup
 # License: GNU General Public License v3.0
-# Last modified: 2025-09-13
+# Last modified: 2025-09-18
 # ────────────────────────────────────────────────
 
 set -euo pipefail
@@ -20,10 +20,7 @@ start_time=$(date +%s)
 windows_username="james"
 wsl_name="nixos"
 github_username="jamesukiyo"
-nixos_config_repo="nixos"
 dotfiles_repo="dotfiles"
-flake_name="pear"
-script_repo="windows-setup"
 
 # ────────────────────────────────────────────────
 # LOGGING
@@ -34,21 +31,10 @@ YELLOW=$(tput setaf 3)
 BLUE=$(tput setaf 4)
 RESET=$(tput sgr0)
 
-log() {
-	echo -e "${BLUE}[$(date +'%H:%M:%S')]${RESET} $*"
-}
-
-success() {
-	echo -e "${GREEN}✓${RESET} $*"
-}
-
-warn() {
-	echo -e "${YELLOW}⚠${RESET} $*"
-}
-
-error() {
-	echo -e "${RED}✗${RESET} $*" >&2
-}
+log() { echo -e "${BLUE}[$(date +'%H:%M:%S')]${RESET} $*" }
+success() { echo -e "${GREEN}✓${RESET} $*" }
+warn() { echo -e "${YELLOW}⚠${RESET} $*" }
+error() { echo -e "${RED}✗${RESET} $*" >&2 }
 
 # ────────────────────────────────────────────────
 # CORE FUNCTIONS
@@ -132,10 +118,7 @@ enable_on_startup() {
 
 	local STARTUP_DIR="C:\\Users\\$windows_username\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"
 	local SHORTCUTS=(
-		"qutebrowser\\current\\qutebrowser.exe"
 		"f.lux\\current\\flux.exe"
-		"flow-launcher\\current\\Flow.Launcher.exe"
-		"obs-studio\\current\\bin\\64bit\\obs64.exe"
 	)
 
 	for shortcut in "${SHORTCUTS[@]}"; do
@@ -166,8 +149,8 @@ run_command 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {
 # INSTALL PACKAGES
 # ────────────────────────────────────────────────
 scoop_buckets=(extras games nerd-fonts versions)
-scoop_packages=(act alacritty bat bruno bun chezmoi docker exercism fd fzf gh git helix hyperfine IosevkaTerm-NF-Mono komorebi mingw nircmd ripgrep starship tableplus vial vim whkd winget winrar)
-winget_packages=(Adobe.Acrobat.Reader.64-bit Blizzard.BattleNet Docker.DockerDesktop pCloudAG.pCloudDrive PrivateInternetAccess.PrivateInternetAccess TheBrowserCompany.Arc Valve.Steam)
+scoop_packages=(alacritty bat bruno bun chezmoi fd fzf gh git helix hyperfine IosevkaTerm-NF-Mono komorebi mingw nircmd ripgrep starship tableplus vial whkd winget winrar)
+winget_packages=(Adobe.Acrobat.Reader.64-bit Blizzard.BattleNet Docker.DockerDesktop pCloudAG.pCloudDrive PrivateInternetAccess.PrivateInternetAccess Valve.Steam)
 
 log "→ Adding Scoop Buckets..."
 for bucket in "${scoop_buckets[@]}"; do
@@ -208,43 +191,27 @@ run_command "chezmoi init --apply https://github.com/$github_username/$dotfiles_
 
 safe_cd ~
 
-run_command "[ ! -d '~/appdata/roaming/qutebrowser/config/catpuccin' ] && git clone https://github.com/catppuccin/qutebrowser.git ~/appdata/roaming/qutebrowser/config/catppuccin || echo ''" "Clone catppuccin theme for Qutebrowser"
-
 enable_on_startup
 
 run_command "wsl --install --no-distribution" "Installing WSL"
 run_command "wsl --update" "Updating WSL"
-run_command "curl -L https://github.com/nix-community/NixOS-WSL/releases/latest/download/nixos.wsl -o ./nixos.wsl" "Download NixOS-WSL"
-run_command "wsl --install --no-launch --from-file ./nixos.wsl --name $wsl_name" "Installing NixOS-WSL"
-run_command "wsl --set-default $wsl_name" "Setting default WSL distro to NixOS"
-run_command "wsl --unregister ubuntu" "Unregistering Default Ubuntu WSL distro"
+run_command "wsl --install --no-launch --from-file 'C:/Users/$windows_username/nixos-wsl-backup/nixos.wsl' --name $wsl_name" "Installing NixOS-WSL"
+run_command "wsl --set-default $wsl_name" "Setting default WSL distro to $wsl_name"
 success "NixOS-WSL base installation finished"
-run_command "wsl -d $wsl_name --user root --cd /etc/nixos curl -L https://raw.githubusercontent.com/$github_username/$script_repo/master/configuration.nix -o /etc/nixos/configuration.nix" "Bootstrapping NixOS configuration"
-run_command "wsl -d $wsl_name sudo nixos-rebuild boot" "[1/4] Fixing user name"
-run_command "wsl -t $wsl_name" "[2/4] Fixing user name"
-run_command "wsl -d $wsl_name --user root exit" "[3/4] Fixing user name"
-run_command "wsl -d $wsl_name sudo nixos-rebuild switch" "[4/4] Fixing user name"
-success "NixOS-WSL username updated"
-run_command "wsl -d $wsl_name sudo nixos-rebuild switch --accept-flake-config --flake github:$github_username/$nixos_config_repo#$flake_name" "Installing NixOS config from github/$github_username/$nixos_config_repo"
-success "NixOS-WSL rebuilt with flake from github:$github_username/$nixos_config_repo#$flake_name"
-run_command "wsl -d $wsl_name sudo rm -rf /root/.nix-defexpr/channels" "[1/2] cleaning channel directories"
-run_command "wsl -d $wsl_name sudo rm -rf /nix/var/nix/profiles/per-user/root/channels" "[2/2] cleaning channel directories"
-run_command "rm ./nixos.wsl" "Removing nixos.wsl installer"
-success "NixOS-WSL cleanup complete"
 run_command "wsl -d $wsl_name sudo tailscale up" "Configuring Tailscale"
 run_command "wsl -d $wsl_name gh auth login" "Configuring GitHub authentication"
 success "NixOS-WSL services authenticated"
 run_command "wsl -d $wsl_name mkdir ~/projects" "Creating empty projects directory"
-run_command "wsl -d $wsl_name touch ~/private.key" "Creating empty gpg key file"
-run_command "wsl -d $wsl_name touch ~/.ssh/id" "Creating empty ssh id file"
-run_command "wsl -d $wsl_name touch ~/.ssh/id.pub" "Creating empty ssh id.pub file"
+run_command "wsl -d $wsl_name touch ~/.ssh/id ~/.ssh/id.pub" "Creating empty user ssh files"
+run_command "wsl -d $wsl_name chmod 0600 ~/.ssh/id ~/.ssh/id.pub" "chmod user ssh files"
+run_command "wsl -d $wsl_name --user root touch /root/.ssh/id /root/.ssh/id.pub" "Creating empty root ssh files"
+run_command "wsl -d $wsl_name --user root chmod 0600 /root/.ssh/id /root/.ssh/id.pub" "chmod root ssh files"
 success "NixOS-WSL files/directories created"
 
 log "============================================================"
 log "Manual steps needed to complete setup:"
-log "- set ssh keys for normal user in ~/.ssh/id and ~/.ssh/id.pub"
-log "- add gpg key to ~/private.key"
-log "- gpg --import ~/private.key"
+log "- set keys for user in ~/.ssh/id and ~/.ssh/id.pub"
+log "- set keys for root in /root/.ssh/id and /root/.ssh/id.pub"
 log "============================================================"
 
 end_time=$(date +%s)
